@@ -1,0 +1,102 @@
+/* static/css/style.css */
+
+/* :rootでサイト全体のカラーパレットを定義すると、後々の変更が楽になります */
+:root {
+    --primary-color: #98b2c8; /* メインの青色 */
+    --primary-color-dark: #98b2c8; /* ホバー時などの濃い青色 */
+    --secondary-color: #ededed; /* 薄い水色の背景 */
+    --header-color: #2c3e50; /* ヘッダーの濃い色 */
+    --text-color: #34495e; /* 基本的なテキストの色 */
+    --light-text-color: #40434d; /* 明るいテキストの色 */
+    --border-color: #dbe9f5; /* ボーダーの色 */
+}
+/* static/css/style.css に追記 */
+
+/* --- 明るい水色のヘッダー --- */
+.navbar.bg-light-blue {
+    background-color: var(--secondary-color) !important; /* :rootで定義した薄い水色を使用 */
+    border-bottom: 1px solid var(--border-color); /* 下に境界線を入れる */
+}
+
+/* navbar-lightの文字色を少し濃くする（任意） */
+.navbar-light .navbar-nav .nav-link {
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.navbar-light .navbar-brand {
+    color: var(--primary-color-dark);
+}
+body {
+    background-color: #dbe2e8; /* 全体の背景色を少しだけグレーに */
+    color: var(--text-color);
+}
+
+/* --- ヘッダー/ナビゲーションバー --- */
+.navbar.bg-custom {
+    background-color: var(--header-color) !important;
+}
+
+/* --- ボタン --- */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-color-dark);
+    border-color: var(--primary-color-dark);
+}
+
+/* --- カード --- */
+.card {
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05); /* カードに少し影をつける */
+}
+.card-header {
+    background-color: var(--secondary-color);
+    color: var(--primary-color-dark);
+    font-weight: bold;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* --- リンク --- */
+a {
+    color: var(--primary-color);
+}
+a:hover {
+    color: var(--primary-color-dark);
+}
+
+/* --- フォームのラジオボタン --- */
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* --- トップページのヒーローセクション --- */
+.hero-section {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-dark));
+    color: var(--light-text-color);
+    border-radius: 0.75rem;
+}
+.hero-section .display-5 {
+    font-weight: bold;
+}
+.hero-section p {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* --- フッター --- */
+footer.site-footer {
+    background-color: #e9ecef; /* フッターの背景色 */
+    color: var(--text-color);
+    padding: 1rem 0;
+    font-size: 0.9rem;
+}
+
+/* --- コンテンツ全体のレイアウト調整 --- */
+.container {
+    /* コンテンツ全体の最大幅を960pxに設定。数値を小さくすると、左右の余白がさらに増えます */
+    max-width: 960px; 
+}

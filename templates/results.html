@@ -1,0 +1,86 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<h1 class="mb-4">アンケート集計結果</h1>
+
+{% if chart_data %}
+<div class="card mb-4">
+    <div class="card-header">
+        定量的評価 (総回答数: {{ total_responses }}件)
+    </div>
+    <div class="card-body">
+        <div style="width: 100%; max-width: 900px; margin: auto;">
+            <canvas id="myChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        コメント一覧
+    </div>
+    <div class="card-body">
+        {% if comments %}
+            <ul class="list-group">
+                {% for comment in comments %}
+                    {% if comment %}
+                        <li class="list-group-item">{{ comment }}</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>コメントはまだありません。</p>
+        {% endif %}
+    </div>
+</div>
+
+{% else %}
+<div class="alert alert-info" role="alert">
+    まだアンケートの回答がありません。
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if chart_data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const ctx = document.getElementById('myChart');
+        // Flaskから渡されたJSON文字列をパースしてJavaScriptオブジェクトに変換
+        const chartData = JSON.parse('{{ chart_data | safe }}');
+
+        new Chart(ctx, {
+            type: 'bar', // グラフの種類 (積み上げ棒グラフにする場合は stacked: true を追加)
+            data: chartData,
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '各質問への評価分布'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true, // 質問ごとに評価を積み上げる
+                    },
+                    y: {
+                        stacked: true, // 質問ごとに評価を積み上げる
+                        beginAtZero: true,
+                        ticks: {
+                            // 目盛りを整数にする
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}
