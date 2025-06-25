@@ -47,21 +47,28 @@ INITIAL_SALES_LOG = 8.8  # 学習データの最初のlog(Sales) (例)
 
 # モデル構築関数
 def build_model():
-    """PyMCモデルの構造を定義する関数。ダミーデータで構造のみを定義する。"""
-    coords = {"time": [0], "dayofweek_state": np.arange(7),
-              "yearly_fourier": np.arange(2 * N_ORDER_YEARLY)}
+    """PyMCモデルの構造を定義する関数。時間の長さを可変にする。"""
+    # 【変更点】coordsからtimeの定義を削除し、次元の器だけを定義
+    coords = {
+        "dayofweek_state": np.arange(7), 
+        "yearly_fourier": np.arange(2 * N_ORDER_YEARLY)
+    }
 
     with pm.Model(coords=coords) as model:
-        # Data containers (サイズ1のダミーで初期化)
-        promo_data = pm.Data('promo_data', [0], mutable=True)
-        dayofweek_idx = pm.Data('dayofweek_idx', [0], mutable=True)
-        school_holiday_data = pm.Data('school_holiday_data', [0], mutable=True)
-        state_holiday_a_data = pm.Data('state_holiday_a_data', [0], mutable=True)
-        state_holiday_b_data = pm.Data('state_holiday_b_data', [0], mutable=True)
-        state_holiday_c_data = pm.Data('state_holiday_c_data', [0], mutable=True)
-        time_year_data = pm.Data('time_year_data', [0.0], mutable=True)
+        # 【変更点】時間の座標を pm.MutableData として定義。これにより長さが可変になる。
+        # この time_coords の長さが、'time'という次元全体の長さを決定する。
+        time_coords = pm.MutableData("time_coords", [0], dims="time")
+
+        # データコンテナも一貫して pm.MutableData を使用
+        promo_data = pm.MutableData('promo_data', [0], dims="time")
+        dayofweek_idx = pm.MutableData('dayofweek_idx', [0], dims="time")
+        school_holiday_data = pm.MutableData('school_holiday_data', [0], dims="time")
+        state_holiday_a_data = pm.MutableData('state_holiday_a_data', [0], dims="time")
+        state_holiday_b_data = pm.MutableData('state_holiday_b_data', [0], dims="time")
+        state_holiday_c_data = pm.MutableData('state_holiday_c_data', [0], dims="time")
+        time_year_data = pm.MutableData('time_year_data', [0.0], dims="time")
         
-        # Trend (初期値は定数から設定)
+        # Trend (長さは time_coords に追従する)
         sigma_trend = pm.HalfNormal('sigma_trend', sigma=0.5)
         trend_rw = pm.GaussianRandomWalk('trend_rw', sigma=sigma_trend, dims="time", 
                                        init_dist=pm.Normal.dist(mu=INITIAL_SALES_LOG, sigma=1))
@@ -88,8 +95,8 @@ def build_model():
               beta_state_c * state_holiday_c_data)
         
         sigma_obs = pm.HalfNormal('sigma_obs', sigma=0.5)
-        # 観測データはダミーを設定。予測時には利用されない。
         sales_log_lik = pm.Normal('sales_log_lik', mu=mu, sigma=sigma_obs, observed=[INITIAL_SALES_LOG], dims="time")
+    
     return model
 
 # モデルとトレースをグローバルにロード
@@ -134,7 +141,6 @@ def index():
                     "state_holiday": {"0": "なし", "a": "祝日A", "b": "祝日B", "c": "祝日C"}[state_holiday]
                 }
                 
-                # 【変更点】定数を使用して予測用データを作成
                 new_time_delta = (prediction_date - LAST_TRAIN_DATE).days
                 if new_time_delta <= 0:
                     flash(f'予測日は学習データの最終日 ({LAST_TRAIN_DATE.strftime("%Y-%m-%d")}) より後の日付を選択してください。', 'warning')
@@ -145,17 +151,23 @@ def index():
                 # 特徴量の作成
                 time_coords_pred = np.arange(N_TRAIN, N_TRAIN + new_time_delta)
                 time_year_pred = (full_prediction_range.dayofyear / 365.25).values
-                dayofweek_pred = (full_prediction_range.dayofweek).values # 0-6
-                
-                promo_pred = np.zeros(new_time_delta); promo_pred[-1] = promo
-                school_holiday_pred = np.zeros(new_time_delta); school_holiday_pred[-1] = school_holiday
-                state_holiday_a_pred = np.zeros(new_time_delta); state_holiday_a_pred[-1] = 1 if state_holiday == 'a' else 0
-                state_holiday_b_pred = np.zeros(new_time_delta); state_holiday_b_pred[-1] = 1 if state_holiday == 'b' else 0
-                state_holiday_c_pred = np.zeros(new_time_delta); state_holiday_c_pred[-1] = 1 if state_holiday == 'c' else 0
+                dayofweek_pred = (full_prediction_range.dayofweek).values
+
+                # ==============================================================================
+                # 【修正点】np.zerosに dtype=np.int32 を追加して整数配列を作成する
+                # ==============================================================================
+                promo_pred = np.zeros(new_time_delta, dtype=np.int32); promo_pred[-1] = promo
+                school_holiday_pred = np.zeros(new_time_delta, dtype=np.int32); school_holiday_pred[-1] = school_holiday
+                state_holiday_a_pred = np.zeros(new_time_delta, dtype=np.int32); state_holiday_a_pred[-1] = 1 if state_holiday == 'a' else 0
+                state_holiday_b_pred = np.zeros(new_time_delta, dtype=np.int32); state_holiday_b_pred[-1] = 1 if state_holiday == 'b' else 0
+                state_holiday_c_pred = np.zeros(new_time_delta, dtype=np.int32); state_holiday_c_pred[-1] = 1 if state_holiday == 'c' else 0
+                # ==============================================================================
 
                 # モデルに新しいデータをセット
                 with pymc_model:
+                    # （この部分は変更なし）
                     pm.set_data({
+                        'time_coords': time_coords_pred,
                         'promo_data': promo_pred,
                         'dayofweek_idx': dayofweek_pred,
                         'school_holiday_data': school_holiday_pred,
@@ -173,7 +185,7 @@ def index():
                     )
 
                 # 最後の時点の予測値のみを取得して結果を計算
-                last_day_preds = np.exp(pred.posterior_predictive['sales_log_lik'].sel(time=time_coords_pred[-1]).values.flatten())
+                last_day_preds = np.exp(pred.posterior_predictive['sales_log_lik'].isel(time=-1).values.flatten())
 
                 prediction_result = {
                     'median': f"{np.median(last_day_preds):,.0f}",
