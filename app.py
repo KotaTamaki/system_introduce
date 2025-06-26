@@ -34,32 +34,30 @@ QUESTIONS = [
 MODEL_FILE = "static/sales_model_trace.nc"
 N_ORDER_YEARLY = 10  # モデル定義で使用したフーリエ級数の次数
 
+# 学習時の情報
+N_TRAIN = 687
+LAST_TRAIN_DATE = pd.to_datetime('2015-01-29')
+INITIAL_SALES_LOG = 8.8
+
 # ==============================================================================
-# 【変更点】CSVを読み込む代わりに、学習時の情報を定数として保持
+# 【変更点 1】モデルとトレースをグローバルスコープでNoneとして初期化
+# アプリケーション起動時には読み込まず、メモリ上に配置しない。
 # ==============================================================================
-# 以下の値は、事前に 'train_store1.csv' から計算したものです。
-# これにより、アプリケーション実行時にCSVファイルを読み込む必要がなくなります。
-N_TRAIN = 687  # フィルタリング後の学習データ総数 (例)
-LAST_TRAIN_DATE = pd.to_datetime('2015-01-29')  # 学習データの最終日 (例)
-INITIAL_SALES_LOG = 8.8  # 学習データの最初のlog(Sales) (例)
+pymc_model = None
+trace = None
 # ==============================================================================
 
 
-# モデル構築関数
+# モデル構築関数 (この関数自体に変更はありません)
 def build_model():
     """PyMCモデルの構造を定義する関数。時間の長さを可変にする。"""
-    # 【変更点】coordsからtimeの定義を削除し、次元の器だけを定義
     coords = {
-        "dayofweek_state": np.arange(7), 
+        "dayofweek_state": np.arange(7),
         "yearly_fourier": np.arange(2 * N_ORDER_YEARLY)
     }
 
     with pm.Model(coords=coords) as model:
-        # 【変更点】時間の座標を pm.MutableData として定義。これにより長さが可変になる。
-        # この time_coords の長さが、'time'という次元全体の長さを決定する。
         time_coords = pm.MutableData("time_coords", [0], dims="time")
-
-        # データコンテナも一貫して pm.MutableData を使用
         promo_data = pm.MutableData('promo_data', [0], dims="time")
         dayofweek_idx = pm.MutableData('dayofweek_idx', [0], dims="time")
         school_holiday_data = pm.MutableData('school_holiday_data', [0], dims="time")
@@ -67,13 +65,11 @@ def build_model():
         state_holiday_b_data = pm.MutableData('state_holiday_b_data', [0], dims="time")
         state_holiday_c_data = pm.MutableData('state_holiday_c_data', [0], dims="time")
         time_year_data = pm.MutableData('time_year_data', [0.0], dims="time")
-        
-        # Trend (長さは time_coords に追従する)
+
         sigma_trend = pm.HalfNormal('sigma_trend', sigma=0.5)
-        trend_rw = pm.GaussianRandomWalk('trend_rw', sigma=sigma_trend, dims="time", 
+        trend_rw = pm.GaussianRandomWalk('trend_rw', sigma=sigma_trend, dims="time",
                                        init_dist=pm.Normal.dist(mu=INITIAL_SALES_LOG, sigma=1))
-        
-        # Seasonality
+
         seasonality_weekly = pm.Normal('seasonality_weekly', mu=0, sigma=1.0, dims="dayofweek_state")
         yearly_beta = pm.Normal('yearly_beta', mu=0, sigma=1.0, dims="yearly_fourier")
         fourier_features_yearly = pt.concatenate(
@@ -81,8 +77,7 @@ def build_model():
             [pt.sin(2 * np.pi * (k + 1) * time_year_data)[:, None] for k in range(N_ORDER_YEARLY)], axis=1
         )
         seasonality_yearly = pm.math.dot(fourier_features_yearly, yearly_beta)
-        
-        # Regressors
+
         beta_promo = pm.Normal('beta_promo', mu=0, sigma=1.0)
         beta_school = pm.Normal('beta_school', mu=0, sigma=1.0)
         beta_state_a = pm.Normal('beta_state_a', mu=0, sigma=1.0)
@@ -93,21 +88,41 @@ def build_model():
               beta_promo * promo_data + beta_school * school_holiday_data +
               beta_state_a * state_holiday_a_data + beta_state_b * state_holiday_b_data +
               beta_state_c * state_holiday_c_data)
-        
+
         sigma_obs = pm.HalfNormal('sigma_obs', sigma=0.5)
         sales_log_lik = pm.Normal('sales_log_lik', mu=mu, sigma=sigma_obs, observed=[INITIAL_SALES_LOG], dims="time")
-    
+
     return model
 
-# モデルとトレースをグローバルにロード
-pymc_model = build_model()
-try:
-    trace = az.from_netcdf(MODEL_FILE)
-    print(f"学習済みモデル {MODEL_FILE} を正常に読み込みました。")
-except FileNotFoundError:
-    print(f"警告: モデルファイル {MODEL_FILE} が見つかりません。予測機能は利用できません。")
-    trace = None
-    pymc_model = None
+# ==============================================================================
+# 【変更点 2】モデルを必要に応じて読み込む関数を定義
+# ==============================================================================
+def load_model_if_needed():
+    """
+    モデルとトレースがメモリにロードされていなければ、ファイルから読み込む。
+    2回目以降の呼び出しでは何もしない。
+    """
+    global pymc_model, trace
+    # 既にロード済みの場合は、即座に処理を終了
+    if pymc_model is not None and trace is not None:
+        return
+
+    print("--- 初回アクセス or モデル未読込のため、モデルをファイルから読み込みます ---")
+    try:
+        # グローバル変数にモデルの構造と学習済みトレースを格納する
+        pymc_model = build_model()
+        trace = az.from_netcdf(MODEL_FILE)
+        print(f"--- 学習済みモデル {MODEL_FILE} を正常に読み込みました ---")
+    except FileNotFoundError:
+        # ファイルが見つからない場合は、変数をNoneのままにしておく
+        pymc_model = None
+        trace = None
+        print(f"--- 警告: モデルファイル {MODEL_FILE} が見つかりません。予測機能は利用できません。 ---")
+    except Exception as e:
+        pymc_model = None
+        trace = None
+        print(f"--- モデル読み込み中に予期せぬエラーが発生しました: {e} ---")
+# ==============================================================================
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -116,56 +131,52 @@ def index():
     research_summary = """
     研究論文は、階層的な販売予測における精度向上と一貫性の確保に焦点を当てています。具体的には、限られた履歴データ、有用な情報の不足、および階層的制約の考慮不足といった課題に対処するため、特徴の分離抽出と再調整に基づく新しい予測手法を提案しています。提案されたフレームワークは、類似製品データを用いた事前学習と微調整、時系列依存および非依存特徴を独立して抽出するモジュール、そして階層的な一貫性を保証する調整モジュールと損失関数を組み合わせています。実世界の小売データを用いた実験により、この手法が既存の主流な予測モデルと比較して優れた性能を示し、供給チェーン管理における意思決定を効果的に支援することが実証されました。
     """
-    
+
     prediction_result = None
     input_data_dict = None
 
     if request.method == 'POST':
+        # ==============================================================================
+        # 【変更点 3】予測実行の直前にモデル読み込み関数を呼び出す
+        # ==============================================================================
+        load_model_if_needed()
+
         if pymc_model is None or trace is None:
-            flash('予測モデルがロードされていないため、予測を実行できません。', 'danger')
+            flash('予測モデルがロードされていない、または読み込みに失敗したため、予測を実行できません。', 'danger')
         else:
             try:
-                # フォームからデータを取得
                 date_str = request.form.get('prediction_date')
                 promo = int(request.form.get('promo', 0))
                 school_holiday = int(request.form.get('school_holiday', 0))
                 state_holiday = request.form.get('state_holiday', '0')
-                
+
                 prediction_date = pd.to_datetime(date_str)
 
-                # 入力データを保存
                 input_data_dict = {
                     "date": prediction_date.strftime('%Y年%m月%d日'),
                     "promo": "あり" if promo == 1 else "なし",
                     "school_holiday": "あり" if school_holiday == 1 else "なし",
                     "state_holiday": {"0": "なし", "a": "祝日A", "b": "祝日B", "c": "祝日C"}[state_holiday]
                 }
-                
+
                 new_time_delta = (prediction_date - LAST_TRAIN_DATE).days
                 if new_time_delta <= 0:
                     flash(f'予測日は学習データの最終日 ({LAST_TRAIN_DATE.strftime("%Y-%m-%d")}) より後の日付を選択してください。', 'warning')
                     return render_template('index.html', summary=research_summary, prediction_result=None, input_data=None)
 
                 full_prediction_range = pd.date_range(start=LAST_TRAIN_DATE + pd.Timedelta(days=1), periods=new_time_delta, freq='D')
-                
-                # 特徴量の作成
+
                 time_coords_pred = np.arange(N_TRAIN, N_TRAIN + new_time_delta)
                 time_year_pred = (full_prediction_range.dayofyear / 365.25).values
                 dayofweek_pred = (full_prediction_range.dayofweek).values
 
-                # ==============================================================================
-                # 【修正点】np.zerosに dtype=np.int32 を追加して整数配列を作成する
-                # ==============================================================================
                 promo_pred = np.zeros(new_time_delta, dtype=np.int32); promo_pred[-1] = promo
                 school_holiday_pred = np.zeros(new_time_delta, dtype=np.int32); school_holiday_pred[-1] = school_holiday
                 state_holiday_a_pred = np.zeros(new_time_delta, dtype=np.int32); state_holiday_a_pred[-1] = 1 if state_holiday == 'a' else 0
                 state_holiday_b_pred = np.zeros(new_time_delta, dtype=np.int32); state_holiday_b_pred[-1] = 1 if state_holiday == 'b' else 0
                 state_holiday_c_pred = np.zeros(new_time_delta, dtype=np.int32); state_holiday_c_pred[-1] = 1 if state_holiday == 'c' else 0
-                # ==============================================================================
 
-                # モデルに新しいデータをセット
                 with pymc_model:
-                    # （この部分は変更なし）
                     pm.set_data({
                         'time_coords': time_coords_pred,
                         'promo_data': promo_pred,
@@ -184,7 +195,6 @@ def index():
                         extend_inferencedata=False
                     )
 
-                # 最後の時点の予測値のみを取得して結果を計算
                 last_day_preds = np.exp(pred.posterior_predictive['sales_log_lik'].isel(time=-1).values.flatten())
 
                 prediction_result = {
@@ -198,6 +208,7 @@ def index():
 
     return render_template('index.html', summary=research_summary, prediction_result=prediction_result, input_data=input_data_dict)
 
+
 # --- 以下、アンケートと結果表示のルート (変更なし) ---
 @app.route('/survey', methods=['GET', 'POST'])
 def survey():
@@ -207,7 +218,7 @@ def survey():
         if not all([data['q1'], data['q2'], data['q3'], data['q4'], data['q5']]):
             flash('すべての評価質問に回答してください。', 'danger')
             return render_template('survey.html', questions=QUESTIONS, form_data=data)
-        
+
         filename = os.path.join(DATA_FOLDER, f"result_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.json")
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)

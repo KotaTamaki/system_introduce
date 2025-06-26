@@ -8,26 +8,7 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <h5 class="card-title">研究を評価する</h5>
-                <p class="card-text">研究内容について、ぜひあなたの評価やご意見をお聞かせください。</p>
-                <a href="{{ url_for('survey') }}" class="btn btn-primary">アンケートに回答する</a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 mb-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <h5 class="card-title">結果を見る</h5>
-                <p class="card-text">これまでに集まったアンケートの集計結果をグラフで確認できます。</p>
-                <a href="{{ url_for('results') }}" class="btn btn-secondary">集計結果へ</a>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <div class="card mb-4">
     <div class="card-header">
@@ -94,6 +75,27 @@
             </p> -->
         </div>
         {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">研究を評価する</h5>
+                <p class="card-text">研究内容について、ぜひあなたの評価やご意見をお聞かせください。</p>
+                <a href="{{ url_for('survey') }}" class="btn btn-primary">アンケートに回答する</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">結果を見る</h5>
+                <p class="card-text">これまでに集まったアンケートの集計結果をグラフで確認できます。</p>
+                <a href="{{ url_for('results') }}" class="btn btn-secondary">集計結果へ</a>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
