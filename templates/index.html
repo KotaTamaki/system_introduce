@@ -8,26 +8,7 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <h5 class="card-title">研究を評価する</h5>
-                <p class="card-text">研究内容について、ぜひあなたの評価やご意見をお聞かせください。</p>
-                <a href="{{ url_for('survey') }}" class="btn btn-primary">アンケートに回答する</a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 mb-4">
-        <div class="card h-100">
-            <div class="card-body text-center">
-                <h5 class="card-title">結果を見る</h5>
-                <p class="card-text">これまでに集まったアンケートの集計結果をグラフで確認できます。</p>
-                <a href="{{ url_for('results') }}" class="btn btn-secondary">集計結果へ</a>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <div class="card mb-4">
     <div class="card-header">
@@ -43,12 +24,10 @@
                     <input type="date" class="form-control" id="prediction_date" name="prediction_date" required>
                 </div>
                 <div class="col-md-4">
-                    <label for="state_holiday" class="form-label">州の休日:</label>
+                    <label for="state_holiday" class="form-label">その日は祝日？:</label>
                     <select class="form-select" id="state_holiday" name="state_holiday">
-                        <option value="0" selected>休日ではない</option>
-                        <option value="a">祝日(a)</option>
-                        <option value="b">祝日(b)</option>
-                        <option value="c">祝日(c)</option>
+                        <option value="0" selected>祝日ではない</option>
+                        <option value="a">祝日</option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -56,13 +35,13 @@
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" value="1" id="promo" name="promo">
                         <label class="form-check-label" for="promo">
-                            プロモーション実施
+                            セール実施
                         </label>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" value="1" id="school_holiday" name="school_holiday">
                         <label class="form-check-label" for="school_holiday">
-                            学校の休日
+                            周辺学校の休日
                         </label>
                     </div>
                 </div>
@@ -89,13 +68,34 @@
             </div>
             <hr>
             <p class="fs-4 text-center mb-0">
-                予測売上 (中央値): <strong>¥{{ prediction_result.median }}</strong>
+                予測売上 (中央値): <strong>💲{{ prediction_result.median }}</strong>
             </p>
-            <p class="text-center text-muted">
+            <!-- <p class="text-center text-muted">
                 94%信用区間: ¥{{ prediction_result.hdi_3 }} 〜 ¥{{ prediction_result.hdi_97 }}
-            </p>
+            </p> -->
         </div>
         {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">研究を評価する</h5>
+                <p class="card-text">研究内容について、ぜひあなたの評価やご意見をお聞かせください。</p>
+                <a href="{{ url_for('survey') }}" class="btn btn-primary">アンケートに回答する</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">結果を見る</h5>
+                <p class="card-text">これまでに集まったアンケートの集計結果をグラフで確認できます。</p>
+                <a href="{{ url_for('results') }}" class="btn btn-secondary">集計結果へ</a>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
