@@ -8,6 +8,76 @@
     </div>
 </div>
 
+
+
+<div class="card mb-4">
+    <div class="card-header">
+        売上予測シミュレーター
+    </div>
+    <div class="card-body">
+        <p class="card-text">学習済みモデルを使って、指定した日の売上を予測します。条件を入力して「予測する」ボタンを押してください。</p>
+        
+        <form method="POST" action="{{ url_for('index') }}" class="mb-4">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-3">
+                    <label for="prediction_date" class="form-label">予測日:</label>
+                    <input type="date" class="form-control" id="prediction_date" name="prediction_date" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="state_holiday" class="form-label">その日は祝日？:</label>
+                    <select class="form-select" id="state_holiday" name="state_holiday">
+                        <option value="0" selected>祝日ではない</option>
+                        <option value="a">祝日</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="1" id="promo" name="promo">
+                        <label class="form-check-label" for="promo">
+                            セール実施
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="1" id="school_holiday" name="school_holiday">
+                        <label class="form-check-label" for="school_holiday">
+                            周辺学校の休日
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">予測する</button>
+                </div>
+            </div>
+        </form>
+
+        {% if prediction_result %}
+        <hr>
+        <h5 class="mt-4">予測結果</h5>
+        <div class="alert alert-success">
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>入力日:</strong> {{ input_data.date }}
+                </div>
+                <div class="col-md-8">
+                     <strong>入力条件:</strong> 
+                     プロモ: {{ input_data.promo }}, 
+                     学校休日: {{ input_data.school_holiday }},
+                     州休日: {{ input_data.state_holiday }}
+                </div>
+            </div>
+            <hr>
+            <p class="fs-4 text-center mb-0">
+                予測売上 (中央値): <strong>💲{{ prediction_result.median }}</strong>
+            </p>
+            <!-- <p class="text-center text-muted">
+                94%信用区間: ¥{{ prediction_result.hdi_3 }} 〜 ¥{{ prediction_result.hdi_97 }}
+            </p> -->
+        </div>
+        {% endif %}
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-6 mb-4">
         <div class="card h-100">
