@@ -167,7 +167,7 @@ def index():
                 full_prediction_range = pd.date_range(start=LAST_TRAIN_DATE + pd.Timedelta(days=1), periods=new_time_delta, freq='D')
 
                 time_coords_pred = np.arange(N_TRAIN, N_TRAIN + new_time_delta)
-                time_year_pred = (full_prediction_range.dayofyear / 365.25).values
+                time_year_pred = (full_prediction_range.dayofyear / 365.25).values.astype('float32')
                 dayofweek_pred = (full_prediction_range.dayofweek).values
 
                 promo_pred = np.zeros(new_time_delta, dtype=np.int32); promo_pred[-1] = promo
