@@ -252,5 +252,10 @@ def results():
         chart_data = json.dumps({'labels': chart_labels, 'datasets': datasets})
     return render_template('results.html', chart_data=chart_data, comments=comments, total_responses=total_responses)
 
+# ==============================================================================
+# 【変更点 4】Renderデプロイメントのためのポートバインディング
+# ==============================================================================
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
+# ==============================================================================
