@@ -1,10 +1,11 @@
 import os
 import json
-from flask import Flask, render_template, request, redirect, url_for, flash
+from functools import wraps # デコレータ作成のためにインポート
+from flask import Flask, render_template, request, redirect, url_for, Response,flash
 from datetime import datetime
 import pandas as pd
 import numpy as np
-
+import csv
 
 # --- PyMC関連のインポート ---
 import pymc as pm
@@ -22,6 +23,10 @@ app.secret_key = 'supersecretkey'  # flashメッセージのために必要
 # --- アンケート機能関連の定数 ---
 DATA_FOLDER = 'data'
 os.makedirs(DATA_FOLDER, exist_ok=True)
+# 認証情報（自由に変更してください）
+ADMIN_USERNAME = 'admin'
+ADMIN_PASSWORD = 'password123'
+
 QUESTIONS = [
     "質問1: この研究の新規性は評価できますか？",
     "質問2: 提案手法の有効性は明確に示されていると感じますか？",
@@ -29,6 +34,8 @@ QUESTIONS = [
     "質問4: 実世界への応用可能性は高いと感じますか？",
     "質問5: この研究は、関連分野に貢献すると思いますか？"
 ]
+
+CSV_FILE = './data/result.csv'
 
 # --- 売上予測モデル関連のグローバル設定 ---
 MODEL_FILE = "static/sales_model_trace.nc"
@@ -47,6 +54,25 @@ pymc_model = None
 trace = None
 # ==============================================================================
 
+def check_auth(username, password):
+    """ユーザー名とパスワードが正しいかチェックする"""
+    return username == ADMIN_USERNAME and password == ADMIN_PASSWORD
+
+def authenticate():
+    """認証を要求するレスポンスを返す"""
+    return Response(
+    '認証が必要です。', 401,
+    {'WWW-Authenticate': 'Basic realm="Login Required"'})
+
+def requires_auth(f):
+    """認証を要求するデコレータ"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not check_auth(auth.username, auth.password):
+            return authenticate()
+        return f(*args, **kwargs)
+    return decorated
 
 # モデル構築関数 (この関数自体に変更はありません)
 def build_model():
@@ -210,23 +236,45 @@ def index():
 
 
 # --- 以下、アンケートと結果表示のルート (変更なし) ---
+
+def save_to_csv(data):
+    """
+    アンケート結果をCSVファイルに保存する関数。
+    """
+    file_exists = os.path.isfile(CSV_FILE)
+
+    with open(CSV_FILE, mode='a', newline='', encoding='utf-8-sig') as f:
+        writer = csv.writer(f)
+
+        if not file_exists:
+            # ヘッダーに「コメント」を追加
+            header = ['Timestamp'] + [f'質問{i+1}' for i in range(len(QUESTIONS))] + ['コメント']
+            writer.writerow(header)
+        
+        writer.writerow(data)
+        
 @app.route('/survey', methods=['GET', 'POST'])
 def survey():
     """アンケートページ"""
-    if request.method == 'POST':
-        data = { 'q1': request.form.get('q1'), 'q2': request.form.get('q2'), 'q3': request.form.get('q3'), 'q4': request.form.get('q4'), 'q5': request.form.get('q5'), 'comment': request.form.get('comment'), 'timestamp': datetime.now().isoformat() }
-        if not all([data['q1'], data['q2'], data['q3'], data['q4'], data['q5']]):
-            flash('すべての評価質問に回答してください。', 'danger')
-            return render_template('survey.html', questions=QUESTIONS, form_data=data)
-
-        filename = os.path.join(DATA_FOLDER, f"result_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.json")
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-        flash('アンケートへのご協力、ありがとうございました！', 'success')
-        return redirect(url_for('results'))
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    answers = []
+    for i in range(1,len(QUESTIONS)+1):
+        answer = request.form.get(f'q{i}')
+        answers.append(answer)
+    print(answers)
+    # フォームからコメントを取得
+    comment = request.form.get('comment')
+    
+    # タイムスタンプ、回答、コメントを結合
+    result_data = [timestamp] + answers + [comment]
+    print(result_data)
+    save_to_csv(result_data)
     return render_template('survey.html', questions=QUESTIONS)
 
+
 @app.route('/results')
+@requires_auth  # この行で認証を必須にする
 def results():
     """集計結果ページ"""
     all_data = []
