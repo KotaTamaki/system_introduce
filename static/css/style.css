@@ -91,8 +91,9 @@ a:hover {
 footer.site-footer {
     background-color: #e9ecef; /* フッターの背景色 */
     color: var(--text-color);
-    padding: 1rem 0;
-    font-size: 0.9rem;
+    position: sticky;
+    top: 100vh;
+    width: 100%;
 }
 
 /* --- コンテンツ全体のレイアウト調整 --- */
