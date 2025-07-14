@@ -251,23 +251,29 @@ def save_to_csv(data):
         
         writer.writerow(data)
         
+        
 @app.route('/survey', methods=['GET', 'POST'])
 def survey():
-    """アンケートページ"""
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
-    answers = []
-    for i in range(1,len(QUESTIONS)+1):
-        answer = request.form.get(f'q{i}')
-        answers.append(answer)
-    print(answers)
-    # フォームからコメントを取得
-    comment = request.form.get('comment')
-    
-    # タイムスタンプ、回答、コメントを結合
-    result_data = [timestamp] + answers + [comment]
-    print(result_data)
-    save_to_csv(result_data)
+    """
+    アンケートの表示（GET）と回答の処理（POST）を行う
+    """
+    # POSTリクエスト（フォームが送信された）の場合
+    if request.method == 'POST':
+        # フォームからデータを取得
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        answers = [request.form.get(f'q{i}') for i in range(1,len(QUESTIONS)+1)]
+        comment = request.form.get('comment')
+        result_data = [timestamp] + answers + [comment]
+
+        # データをCSVに保存
+        save_to_csv(result_data)
+
+        # メッセージを表示し、メインページ（この場合は自分自身）にリダイレクト
+        flash('ご回答ありがとうございました！')
+        return redirect(url_for('index'))
+
+    # GETリクエスト（ページを最初に表示する）の場合
+    # survey.html を表示する
     return render_template('survey.html', questions=QUESTIONS)
 
 
