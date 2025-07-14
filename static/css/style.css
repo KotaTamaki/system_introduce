@@ -77,14 +77,16 @@ a:hover {
 /* --- トップページのヒーローセクション --- */
 .hero-section {
     background: linear-gradient(135deg, var(--primary-color), var(--primary-color-dark));
-    color: var(--light-text-color);
+    color: rgba(255, 255, 255, 0.9);
     border-radius: 0.75rem;
 }
 .hero-section .display-5 {
     font-weight: bold;
+    
 }
 .hero-section p {
-    color: rgba(255, 255, 255, 0.9);
+    padding-top: 2%;
+    color: rgba(0, 0, 0, 0.9);
 }
 
 /* --- フッター --- */
