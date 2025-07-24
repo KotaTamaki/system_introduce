@@ -76,17 +76,22 @@ a:hover {
 
 /* --- トップページのヒーローセクション --- */
 .hero-section {
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-dark));
-    color: rgba(255, 255, 255, 0.9);
+    background-color: white;
+    /* color: rgba(255, 255, 255, 0.9); */
     border-radius: 0.75rem;
 }
 .hero-section .display-5 {
+    background-color: var(--secondary-color);
+    color: var(--primary-color-dark);
     font-weight: bold;
+    border-bottom: 1px solid var(--border-color);
+    font-weight: bold;
+
     
 }
 .hero-section p {
     padding-top: 2%;
-    color: rgba(0, 0, 0, 0.9);
+    color: var(--text-color);
 }
 
 /* --- フッター --- */
