@@ -27,15 +27,38 @@ os.makedirs(DATA_FOLDER, exist_ok=True)
 ADMIN_USERNAME = 'admin'
 ADMIN_PASSWORD = 'password123'
 
-QUESTIONS = [
-    "質問1: この研究の新規性は評価できますか？",
-    "質問2: 提案手法の有効性は明確に示されていると感じますか？",
-    "質問3: 論文の構成や説明は分かりやすいですか？",
-    "質問4: 実世界への応用可能性は高いと感じますか？",
-    "質問5: この研究は、関連分野に貢献すると思いますか？"
+# 質問3の表形式で使う項目リスト
+Q3_FACTORS = [
+    "天気（雨・晴れなど）",
+    "曜日（平日・土日など）",
+    "時間帯（朝・昼・夜など）",
+    "イベントの有無（セール・キャンペーンなど）",
+    "アクセスの良さ（立地・交通手段など）",
+    "来店回数（習慣化しているかどうか）",
+    "混雑状況（人の多さ）"
 ]
 
 CSV_FILE = './data/result.csv'
+
+def save_to_csv(data):
+    """
+    アンケート結果をCSVファイルに保存する関数。
+    """
+    file_exists = os.path.isfile(CSV_FILE)
+
+    with open(CSV_FILE, mode='a', newline='', encoding='utf-8-sig') as f:
+        writer = csv.writer(f)
+
+        if not file_exists:
+            # 新しい質問に合わせたヘッダーを作成
+            header = ['Timestamp', 'Q1_雇い主として利用したいか', 'Q1_利用目的', 'Q2_来客時に予測を見るか']
+            # Q3の各項目をヘッダーに追加
+            for factor in Q3_FACTORS:
+                header.append(f'Q3_{factor}')
+            header.append('コメント')
+            writer.writerow(header)
+        
+        writer.writerow(data)
 
 # --- 売上予測モデル関連のグローバル設定 ---
 MODEL_FILE = "static/sales_model_trace.nc"
@@ -233,23 +256,6 @@ def index():
     return render_template('index.html', summary=research_summary, prediction_result=prediction_result, input_data=input_data_dict)
 
 
-# --- 以下、アンケートと結果表示のルート (変更なし) ---
-
-def save_to_csv(data):
-    """
-    アンケート結果をCSVファイルに保存する関数。
-    """
-    file_exists = os.path.isfile(CSV_FILE)
-
-    with open(CSV_FILE, mode='a', newline='', encoding='utf-8-sig') as f:
-        writer = csv.writer(f)
-
-        if not file_exists:
-            # ヘッダーに「コメント」を追加
-            header = ['Timestamp'] + [f'質問{i+1}' for i in range(len(QUESTIONS))] + ['コメント']
-            writer.writerow(header)
-        
-        writer.writerow(data)
         
         
 @app.route('/survey', methods=['GET', 'POST'])
@@ -259,22 +265,38 @@ def survey():
     """
     # POSTリクエスト（フォームが送信された）の場合
     if request.method == 'POST':
-        # フォームからデータを取得
+        # フォームから新しい形式でデータを取得
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        answers = [request.form.get(f'q{i}') for i in range(1,len(QUESTIONS)+1)]
+        
+        # 質問1
+        q1_use_forecast = request.form.get('q1_use_forecast')
+        q1_reason = request.form.get('q1_reason', '') # 「いいえ」の場合は送信されないのでデフォルト値を設定
+
+        # 質問2
+        q2_check_forecast = request.form.get('q2_check_forecast')
+
+        # 質問3 (表形式)
+        q3_answers = []
+        for i in range(len(Q3_FACTORS)):
+            # HTML側で `name="q3_factor_{{ i }}"` と設定するのに合わせる
+            q3_answers.append(request.form.get(f'q3_factor_{i}'))
+
+        # その他コメント
         comment = request.form.get('comment')
-        result_data = [timestamp] + answers + [comment]
+        
+        # CSVに保存するデータリストを作成
+        result_data = [timestamp, q1_use_forecast, q1_reason, q2_check_forecast] + q3_answers + [comment]
 
         # データをCSVに保存
         save_to_csv(result_data)
 
-        # メッセージを表示し、メインページ（この場合は自分自身）にリダイレクト
+        # メッセージを表示し、メインページにリダイレクト
         flash('ご回答ありがとうございました！')
         return redirect(url_for('index'))
 
     # GETリクエスト（ページを最初に表示する）の場合
-    # survey.html を表示する
-    return render_template('survey.html', questions=QUESTIONS)
+    # survey.html を表示する。質問3の項目リストをテンプレートに渡す
+    return render_template('survey.html', q3_factors=Q3_FACTORS)
 
 
 @app.route('/results')
@@ -304,5 +326,9 @@ def results():
         chart_data = json.dumps({'labels': chart_labels, 'datasets': datasets})
     return render_template('results.html', chart_data=chart_data, comments=comments, total_responses=total_responses)
 
+# ==============================================================================
+# 【変更点 4】Renderデプロイメントのためのポートバインディング
+# ==============================================================================
 if __name__ == '__main__':
     app.run(debug=True)
+# ==============================================================================
