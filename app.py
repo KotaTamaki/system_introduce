@@ -6,7 +6,8 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import csv
-
+from  result import group_plot
+ 
 # --- PyMC関連のインポート ---
 import pymc as pm
 import arviz as az
@@ -298,33 +299,41 @@ def survey():
     # survey.html を表示する。質問3の項目リストをテンプレートに渡す
     return render_template('survey.html', q3_factors=Q3_FACTORS)
 
-
+PLOT_DIR = 'static/plots'
+os.makedirs(PLOT_DIR, exist_ok=True)
 @app.route('/results')
 @requires_auth  # この行で認証を必須にする
 def results():
     """集計結果ページ"""
-    all_data = []
+    plot_urls = [] # 表示するプロット画像のURLを格納するリスト
+    
+    csv_files_found = False
     for filename in sorted(os.listdir(DATA_FOLDER)):
-        if filename.endswith('.json'):
+        if filename.endswith('.csv'):
+            csv_files_found = True
             filepath = os.path.join(DATA_FOLDER, filename)
+            
+            # 保存する画像ファイル名を作成 (例: data.csv -> data.csv.png)
+            plot_filename = f"{filename}.png"
+            save_path = os.path.join(PLOT_DIR, plot_filename)
+            
+            # group_plot関数に保存パスを渡して実行
             try:
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    all_data.append(json.load(f))
-            except json.JSONDecodeError:
-                print(f"Warning: Skipping corrupted or empty file: {filename}")
+                group_plot(filepath, save_path)
+                # 保存した画像のURLをリストに追加
+                plot_urls.append(url_for('static', filename=f'plots/{plot_filename}'))
+            except Exception as e:
+                flash(f"プロットの生成中にエラーが発生しました: {filename} ({e})", "danger")
 
-    chart_data, comments, total_responses = None, [], len(all_data)
-    if all_data:
-        df = pd.DataFrame(all_data)
-        comments = df['comment'].dropna().tolist()
-        chart_labels = [q.split(':')[0] for q in QUESTIONS]
-        datasets, ratings = [], [1, 2, 3, 4, 5]
-        colors = ['rgba(255, 99, 132, 0.7)', 'rgba(255, 159, 64, 0.7)', 'rgba(255, 205, 86, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(54, 162, 235, 0.7)']
-        for i, rating in enumerate(ratings):
-            rating_counts = [(df[f'q{q_num}'] == str(rating)).sum() if f'q{q_num}' in df else 0 for q_num in range(1, 6)]
-            datasets.append({'label': f'評価 {rating}', 'data': [int(c) for c in rating_counts], 'backgroundColor': colors[i % len(colors)]})
-        chart_data = json.dumps({'labels': chart_labels, 'datasets': datasets})
-    return render_template('results.html', chart_data=chart_data, comments=comments, total_responses=total_responses)
+    if not csv_files_found:
+        flash("表示するCSVファイルが見つかりませんでした。", "warning")
+    elif plot_urls:
+        flash("プロットが正常に生成されました。", "success")
+
+    # プロット画像のURLリストをテンプレートに渡してレンダリング
+    return render_template('results.html', plot_urls=plot_urls)
+
+   
 
 # ==============================================================================
 # 【変更点 4】Renderデプロイメントのためのポートバインディング
