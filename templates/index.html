@@ -12,7 +12,7 @@
 
 <div class="card mb-4">
     <div class="card-header">
-        売上予測シミュレーター
+        大型ショッピングモールの来客者数予測シミュレーター
     </div>
     <div class="card-body">
         <p class="card-text">学習済みモデルを使って、指定した日の売上を予測します。条件を入力して「予測する」ボタンを押してください。</p>
@@ -63,12 +63,12 @@
                      <strong>入力条件:</strong> 
                      プロモ: {{ input_data.promo }}, 
                      学校休日: {{ input_data.school_holiday }},
-                     州休日: {{ input_data.state_holiday }}
+                     休日: {{ input_data.state_holiday }}
                 </div>
             </div>
             <hr>
             <p class="fs-4 text-center mb-0">
-                予測売上 (中央値): <strong>💲{{ prediction_result.median }}</strong>
+                来客者予測 (中央値): <strong>{{ prediction_result.median }}人</strong>
             </p>
             <!-- <p class="text-center text-muted">
                 94%信用区間: ¥{{ prediction_result.hdi_3 }} 〜 ¥{{ prediction_result.hdi_97 }}
