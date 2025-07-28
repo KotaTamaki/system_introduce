@@ -48,9 +48,9 @@ def prepare_chart_data(csv_path):
         chart_data = {
             'labels': elements,
             'datasets': [
-                {'label': '低評価', 'data': score_df['1'].tolist(), 'backgroundColor': '#a9d1f7'},
-                {'label': '中評価', 'data': score_df['2'].tolist(), 'backgroundColor': '#f7c87c'},
-                {'label': '高評価', 'data': score_df['3'].tolist(), 'backgroundColor': '#f79489'}
+                {'label': '低評価', 'data': score_df['1'].tolist(), 'backgroundColor': '#0072B2'},
+                {'label': '中評価', 'data': score_df['2'].tolist(), 'backgroundColor': '#E69F00'},
+                {'label': '高評価', 'data': score_df['3'].tolist(), 'backgroundColor': '#009E73'}
             ],
             'totals': total_counts.tolist()
         }

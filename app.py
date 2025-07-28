@@ -22,7 +22,7 @@ app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # flashメッセージのために必要
 
 # --- アンケート機能関連の定数 ---
-DATA_FOLDER = 'data'
+DATA_FOLDER = '/Users/route58/エンジニアリングシステム/アプリ/data'
 os.makedirs(DATA_FOLDER, exist_ok=True)
 # 認証情報（自由に変更してください）
 ADMIN_USERNAME = 'admin'
@@ -39,7 +39,7 @@ Q3_FACTORS = [
     "混雑状況（人の多さ）"
 ]
 
-CSV_FILE = './data/result.csv'
+CSV_FILE = '/Users/route58/エンジニアリングシステム/アプリ/data/result.csv'
 
 def save_to_csv(data):
     """
@@ -336,12 +336,19 @@ def results():
     chart_data_list = []
     
     try:
-        # Get a list of all files in the data folder
+        # 1. 探しているフォルダの絶対パスを確認
+        print(f"DEBUG: Checking for data folder at: {os.path.abspath(DATA_FOLDER)}")
+
         if os.path.exists(DATA_FOLDER):
             files = sorted(os.listdir(DATA_FOLDER))
+            # 2. フォルダ内で見つかったファイル一覧を確認
+            print(f"DEBUG: Files found in data folder: {files}")
         else:
             files = []
             flash(f"Data folder '{DATA_FOLDER}' not found.", "danger")
+            # 2a. フォルダが見つからないことも確認
+            print(f"DEBUG: Data folder not found at {os.path.abspath(DATA_FOLDER)}")
+
 
         csv_files_found = False
         for filename in files:
@@ -349,21 +356,29 @@ def results():
                 csv_files_found = True
                 filepath = os.path.join(DATA_FOLDER, filename)
                 
-                # Create the chart data from the file
+                # 3. 処理対象のファイルパスを確認
+                print(f"DEBUG: Processing file: {filepath}")
+                
                 chart_data = prepare_chart_data(filepath)
                 
-                # This 'if' statement is the crucial check
+                # 4. prepare_chart_data の戻り値を直接確認（これが最も重要）
+                print(f"DEBUG: Chart data returned from prepare_chart_data: {chart_data}")
+                
                 if chart_data:
                     chart_data_list.append({
-                        'title': f'Result for {filename}', # Use filename as title
+                        'title': f'Result for {filename}',
                         'data_json': json.dumps(chart_data) 
                     })
 
         if not csv_files_found:
             flash("No CSV files found in the data folder.", "warning")
+            # 5. CSVファイルが一つも見つからなかったことを確認
+            print("DEBUG: No CSV files were found in the data folder.")
 
     except Exception as e:
         flash(f"An error occurred while generating chart data: {e}", "danger")
+        # 6. エラーが発生した場合はその内容を確認
+        print(f"DEBUG: An exception occurred: {e}")
 
     return render_template('results.html', chart_data_list=chart_data_list)
 
