@@ -6,7 +6,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import csv
-from  python.result import group_plot
+from  python.result import prepare_chart_data 
  
 # --- PyMC関連のインポート ---
 import pymc as pm
@@ -302,36 +302,74 @@ def survey():
 PLOT_DIR = 'static/plots'
 os.makedirs(PLOT_DIR, exist_ok=True)
 @app.route('/results')
-@requires_auth  # この行で認証を必須にする
+# def results():
+#     """メモリ上で生成した複数のプロットを直接表示するページ"""
+#     plot_data = [] # プロットの画像データと説明を格納するリスト
+
+#     plots_to_generate = [
+#         {'filename': '../data/result.csv', 'description': 'データセット1のカテゴリ別集計'},
+
+#         # ... 他のプロット ...
+#     ]
+
+#     try:
+#         for item in plots_to_generate:
+#             filepath = os.path.join(DATA_FOLDER, item['filename'])
+#             if os.path.exists(filepath):
+#                 # グラフ用のデータを生成
+#                 chart_data = prepare_chart_data(filepath)
+#                 print(chart_data)
+#                 if chart_data:
+#                     plot_data.append({
+#                         'title': item['title'],
+#                         # テンプレートに渡すためにJSON文字列に変換
+#                         'data_json': json.dumps(chart_data) 
+#                     })
+
+#             else:
+#                  flash(f"ファイルが見つかりませんでした: {item['filename']}", "warning")
+
+#     except Exception as e:
+#         flash(f"グラフデータ生成中にエラーが発生しました: {e}", "danger")
+#     return render_template('results.html', chart_data_list=plot_data)
 def results():
-    """集計結果ページ"""
-    plot_urls = [] # 表示するプロット画像のURLを格納するリスト
+    chart_data_list = []
     
-    csv_files_found = False
-    for filename in sorted(os.listdir(DATA_FOLDER)):
-        if filename.endswith('.csv'):
-            csv_files_found = True
-            filepath = os.path.join(DATA_FOLDER, filename)
-            
-            # 保存する画像ファイル名を作成 (例: data.csv -> data.csv.png)
-            plot_filename = f"{filename}.png"
-            save_path = os.path.join(PLOT_DIR, plot_filename)
-            
-            # group_plot関数に保存パスを渡して実行
-            try:
-                group_plot(filepath, save_path)
-                # 保存した画像のURLをリストに追加
-                plot_urls.append(url_for('static', filename=f'plots/{plot_filename}'))
-            except Exception as e:
-                flash(f"プロットの生成中にエラーが発生しました: {filename} ({e})", "danger")
+    try:
+        # Get a list of all files in the data folder
+        if os.path.exists(DATA_FOLDER):
+            files = sorted(os.listdir(DATA_FOLDER))
+        else:
+            files = []
+            flash(f"Data folder '{DATA_FOLDER}' not found.", "danger")
 
-    if not csv_files_found:
-        flash("表示するCSVファイルが見つかりませんでした。", "warning")
-    elif plot_urls:
-        flash("プロットが正常に生成されました。", "success")
+        csv_files_found = False
+        for filename in files:
+            if filename.endswith('.csv'):
+                csv_files_found = True
+                filepath = os.path.join(DATA_FOLDER, filename)
+                
+                # Create the chart data from the file
+                chart_data = prepare_chart_data(filepath)
+                
+                # This 'if' statement is the crucial check
+                if chart_data:
+                    chart_data_list.append({
+                        'title': f'Result for {filename}', # Use filename as title
+                        'data_json': json.dumps(chart_data) 
+                    })
 
-    # プロット画像のURLリストをテンプレートに渡してレンダリング
-    return render_template('results.html', plot_urls=plot_urls)
+        if not csv_files_found:
+            flash("No CSV files found in the data folder.", "warning")
+
+    except Exception as e:
+        flash(f"An error occurred while generating chart data: {e}", "danger")
+
+    return render_template('results.html', chart_data_list=chart_data_list)
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
    
 

@@ -5,42 +5,108 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>集計結果</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="container mt-4">
-    
+
+    <div class="container-fluid mt-4">
+
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}" role="alert">
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
                         {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
-        <h2>集計結果プロット</h2>
+        <h2 class="mb-3">集計結果（インタラクティブグラフ）</h2>
         <hr>
 
         <div class="row">
-            {% if plot_urls %}
-                {% for url in plot_urls %}
-                    <div class="col-md-6 mb-4">
+            {% if chart_data_list %}
+                {% for chart in chart_data_list %}
+                    <div class="col-12 mb-4">
                         <div class="card">
+                            <div class="card-header">
+                                {{ chart.title }}
+                            </div>
                             <div class="card-body">
-                                <img src="{{ url }}" class="img-fluid" alt="生成されたプロット画像">
+                                <div style="height: 400px;">
+                                    <canvas id="chart-{{ loop.index }}"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    <script>
+                        (function() {
+                            // Flaskから渡されたJSONデータをJavaScriptオブジェクトに変換
+                            const chartData = JSON.parse('{{ chart.data_json | safe }}');
+                            
+                            // グラフを描画するキャンバス要素を取得
+                            const ctx = document.getElementById('chart-{{ loop.index }}').getContext('2d');
+                            
+                            new Chart(ctx, {
+                                type: 'bar', // 積み上げ棒グラフ
+                                data: {
+                                    labels: chartData.labels,
+                                    datasets: chartData.datasets
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false, // 高さを固定するためにfalseに
+                                    scales: {
+                                        x: { 
+                                            stacked: true,
+                                            // 棒グラフの幅を調整
+                                            categoryPercentage: 0.7, // カテゴリ幅の70%を棒グラフ領域として使用
+                                            barPercentage: 0.9       // その領域の90%を実際の棒の幅として使用
+                                        },
+                                        y: { 
+                                            stacked: true,
+                                            beginAtZero: true
+                                        }
+                                    },
+                                    plugins: {
+                                        tooltip: {
+                                            // カーソルを合わせた時の表示をカスタマイズ
+                                            callbacks: {
+                                                label: function(context) {
+                                                    let label = context.dataset.label || '';
+                                                    if (label) {
+                                                        label += ': ';
+                                                    }
+                                                    if (context.parsed.y !== null) {
+                                                        label += context.parsed.y + '件';
+                                                    }
+                                                    return label;
+                                                },
+                                                footer: function(tooltipItems) {
+                                                    let total = 0;
+                                                    tooltipItems.forEach(function(tooltipItem) {
+                                                        total += tooltipItem.parsed.y;
+                                                    });
+                                                    return '合計: ' + total + '件';
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        })();
+                    </script>
                 {% endfor %}
             {% else %}
                 <div class="col">
-                    <p class="text-muted">表示するプロットがありません。</p>
+                    <p class="text-muted">表示するグラフがありません。</p>
                 </div>
             {% endif %}
         </div>
-
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
