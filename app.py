@@ -6,7 +6,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import csv
-from  result import group_plot
+from  python.result import group_plot
  
 # --- PyMC関連のインポート ---
 import pymc as pm
