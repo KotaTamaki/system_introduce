@@ -302,6 +302,7 @@ def survey():
 PLOT_DIR = 'static/plots'
 os.makedirs(PLOT_DIR, exist_ok=True)
 @app.route('/results')
+@requires_auth
 def results():
     chart_data_list = []
     
