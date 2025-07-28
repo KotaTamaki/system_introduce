@@ -302,36 +302,6 @@ def survey():
 PLOT_DIR = 'static/plots'
 os.makedirs(PLOT_DIR, exist_ok=True)
 @app.route('/results')
-# def results():
-#     """メモリ上で生成した複数のプロットを直接表示するページ"""
-#     plot_data = [] # プロットの画像データと説明を格納するリスト
-
-#     plots_to_generate = [
-#         {'filename': '../data/result.csv', 'description': 'データセット1のカテゴリ別集計'},
-
-#         # ... 他のプロット ...
-#     ]
-
-#     try:
-#         for item in plots_to_generate:
-#             filepath = os.path.join(DATA_FOLDER, item['filename'])
-#             if os.path.exists(filepath):
-#                 # グラフ用のデータを生成
-#                 chart_data = prepare_chart_data(filepath)
-#                 print(chart_data)
-#                 if chart_data:
-#                     plot_data.append({
-#                         'title': item['title'],
-#                         # テンプレートに渡すためにJSON文字列に変換
-#                         'data_json': json.dumps(chart_data) 
-#                     })
-
-#             else:
-#                  flash(f"ファイルが見つかりませんでした: {item['filename']}", "warning")
-
-#     except Exception as e:
-#         flash(f"グラフデータ生成中にエラーが発生しました: {e}", "danger")
-#     return render_template('results.html', chart_data_list=plot_data)
 def results():
     chart_data_list = []
     
