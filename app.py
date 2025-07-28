@@ -6,7 +6,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import csv
-from  python.result import prepare_chart_data 
+from  python.result import prepare_chart_data,group_plot
  
 # --- PyMC関連のインポート ---
 import pymc as pm
@@ -304,39 +304,41 @@ os.makedirs(PLOT_DIR, exist_ok=True)
 @app.route('/results')
 @requires_auth
 def results():
-    chart_data_list = []
+    interactive_charts = []
+    static_images = []
+    
+    files_to_plot = [{'filename': 'result.csv', 'title': '総合アンケート結果'}]
     
     try:
-        # Get a list of all files in the data folder
-        if os.path.exists(DATA_FOLDER):
-            files = sorted(os.listdir(DATA_FOLDER))
-        else:
-            files = []
-            flash(f"Data folder '{DATA_FOLDER}' not found.", "danger")
-
-        csv_files_found = False
-        for filename in files:
-            if filename.endswith('.csv'):
-                csv_files_found = True
-                filepath = os.path.join(DATA_FOLDER, filename)
-                
-                # Create the chart data from the file
+        for item in files_to_plot:
+            filepath = os.path.join(DATA_FOLDER, item['filename'])
+            if os.path.exists(filepath):
+                # インタラクティブグラフ用のデータを生成
                 chart_data = prepare_chart_data(filepath)
-                
-                # This 'if' statement is the crucial check
                 if chart_data:
-                    chart_data_list.append({
-                        'title': f'Result for {filename}', # Use filename as title
+                    interactive_charts.append({
+                        'title': item['title'] + " (インタラクティブ)",
                         'data_json': json.dumps(chart_data) 
                     })
 
-        if not csv_files_found:
-            flash("No CSV files found in the data folder.", "warning")
-
+                # 静的画像グラフを生成・保存
+                plot_filename = f"{item['filename']}.png"
+                save_path = os.path.join(PLOT_DIR, plot_filename)
+                group_plot(filepath, save_path)
+                plot_url = url_for('static', filename=f'plots/{plot_filename}')
+                static_images.append({
+                    'title': item['title'] + " (静的画像)",
+                    'url': plot_url
+                })
+            else:
+                 flash(f"ファイルが見つかりませんでした: {item['filename']}", "warning")
     except Exception as e:
-        flash(f"An error occurred while generating chart data: {e}", "danger")
+        flash(f"グラフ生成中にエラーが発生しました: {e}", "danger")
 
-    return render_template('results.html', chart_data_list=chart_data_list)
+    return render_template('results.html', 
+                           interactive_charts=interactive_charts, 
+                           static_images=static_images)
+
 
 
 if __name__ == '__main__':
