@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import csv
 # from  python.result import prepare_chart_data,group_plot
-from  python.result import group_plot
+from  python.result import circle_plot,group_plot
  
 # --- PyMC関連のインポート ---
 import pymc as pm
@@ -314,31 +314,37 @@ def results():
         for item in files_to_plot:
             filepath = os.path.join(DATA_FOLDER, item['filename'])
             if os.path.exists(filepath):
-                # # インタラクティブグラフ用のデータを生成
-                # chart_data = prepare_chart_data(filepath)
-                # if chart_data:
-                #     interactive_charts.append({
-                #         'title': item['title'] + " (インタラクティブ)",
-                #         'data_json': json.dumps(chart_data) 
-                #     })
-
+                
                 # 静的画像グラフを生成・保存
                 plot_filename = f"{item['filename']}.png"
                 save_path = os.path.join(PLOT_DIR, plot_filename)
                 group_plot(filepath, save_path)
                 plot_url = url_for('static', filename=f'plots/{plot_filename}')
-                static_images.append({
-                    'title': item['title'] + " (静的画像)",
-                    'url': plot_url
-                })
+                stacked_bar_plot_url = url_for('static', filename=f'plots/{plot_filename}')
+                # static_images.append({
+                #     'title': item['title'] + " (来店に影響する各要素の点数)",
+                #     'url': plot_url
+                # })
+                # print("ここまではできている")
+                
+                plot_filename_circle = f"{item['filename']}_circle.png"
+                save_path = os.path.join(PLOT_DIR, plot_filename_circle)
+                print(save_path)
+                circle_plot(filepath, save_path)
+                plot_url_circle = url_for('static', filename=f'plots/{plot_filename_circle}')
+                # static_images.append({
+                #     'title': item['title'] + " (来店に影響する各要素の点数)",
+                #     'url': plot_url_circle 
+                # })
+                pie_chart_plot_url = url_for('static', filename=f'plots/{plot_filename_circle}')
             else:
                  flash(f"ファイルが見つかりませんでした: {item['filename']}", "warning")
     except Exception as e:
         flash(f"グラフ生成中にエラーが発生しました: {e}", "danger")
 
     return render_template('results.html', 
-                           interactive_charts=interactive_charts, 
-                           static_images=static_images)
+                           stacked_bar_url=stacked_bar_plot_url, 
+                           pie_chart_url=pie_chart_plot_url)
 
 
 

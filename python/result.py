@@ -135,3 +135,70 @@ def group_plot(csv,output_path):
     # plt.show()
     plt.savefig(output_path)
     plt.close()
+    
+    
+def circle_plot(csv_path, output_path):
+    """
+    CSVファイルを読み込み、2つの円グラフを生成して指定されたパスに保存する関数。
+    """
+    # on_bad_linesはどちらか一方でOKです
+    df = pd.read_csv(csv_path, on_bad_lines='skip')
+
+    if df.empty:
+        print(f"警告: {csv_path} は空のため、プロットをスキップします。")
+        return
+
+    # 回答データ
+    # .reindex()で'はい', 'いいえ'の順序を固定し、片方しかなくてもエラーを防ぐ
+    q1_counts = df.iloc[:, 1].value_counts().reindex(['はい', 'いいえ'], fill_value=0)
+    q2_counts = df.iloc[:, 3].value_counts().reindex(['はい', 'いいえ'], fill_value=0)
+
+    # 薄い配色（はい → オレンジ、いいえ → 青）
+    colors = ['#FFD180', '#A6C8E3']
+
+    # autopct関数（ラベルと割合を表示）
+    def make_autopct(values):
+        def my_autopct(pct):
+            total = sum(values)
+            val = int(round(pct*total/100.0))
+            # 割合(%)と実際の回答数(N)の両方を表示
+            return f'{pct:.1f}%\n(N={val})'
+        return my_autopct
+
+    # グラフ作成（1行2列の横並び）
+    fig, axes = plt.subplots(1, 2, figsize=(16, 7)) # 少し横長に調整
+
+    # --- 円グラフ① ---
+    axes[0].pie(
+        q1_counts,
+        labels=q1_counts.index, # ラベルを凡例ではなくグラフ内に表示
+        autopct=make_autopct(q1_counts),
+        startangle=90,
+        colors=colors,
+        counterclock=False,
+        textprops={'fontsize': 14} # フォントサイズを調整
+    )
+    axes[0].set_title("Q1. あなたが雇い主なら来客予測を使いたいですか？", fontsize=18, pad=20)
+    axes[0].axis('equal')
+
+    # --- 円グラフ② ---
+    axes[1].pie(
+        q2_counts,
+        labels=q2_counts.index,
+        autopct=make_autopct(q2_counts),
+        startangle=90,
+        colors=colors,
+        counterclock=False,
+        textprops={'fontsize': 14}
+    )
+    axes[1].set_title("Q2. 来客する時に予想を見てみようと思いますか？", fontsize=18, pad=20)
+    axes[1].axis('equal')
+
+    # レイアウト調整
+    plt.tight_layout()
+    
+    # ▼▼▼ この行がグラフを画像としてファイルに保存します ▼▼▼
+    plt.savefig(output_path)
+    
+    # メモリを解放するためにプロットを閉じます
+    plt.close()
