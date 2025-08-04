@@ -6,7 +6,8 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import csv
-from  python.result import prepare_chart_data,group_plot
+# from  python.result import prepare_chart_data,group_plot
+from  python.result import group_plot
  
 # --- PyMC関連のインポート ---
 import pymc as pm
@@ -313,13 +314,13 @@ def results():
         for item in files_to_plot:
             filepath = os.path.join(DATA_FOLDER, item['filename'])
             if os.path.exists(filepath):
-                # インタラクティブグラフ用のデータを生成
-                chart_data = prepare_chart_data(filepath)
-                if chart_data:
-                    interactive_charts.append({
-                        'title': item['title'] + " (インタラクティブ)",
-                        'data_json': json.dumps(chart_data) 
-                    })
+                # # インタラクティブグラフ用のデータを生成
+                # chart_data = prepare_chart_data(filepath)
+                # if chart_data:
+                #     interactive_charts.append({
+                #         'title': item['title'] + " (インタラクティブ)",
+                #         'data_json': json.dumps(chart_data) 
+                #     })
 
                 # 静的画像グラフを生成・保存
                 plot_filename = f"{item['filename']}.png"
