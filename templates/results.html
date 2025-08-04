@@ -1,86 +1,101 @@
-{% extends 'layout.html' %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>集計結果</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* ページ全体の最小の高さを確保し、フッターが常に下に来るように調整 */
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .main-content {
+            flex: 1; /* メインコンテンツが利用可能なスペースをすべて埋める */
+        }
+    </style>
+</head>
+<body>
 
-{% block content %}
-<h1 class="mb-4">アンケート集計結果</h1>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-custom">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="{{ url_for('index') }}">研究評価サイト</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('index') }}">概要</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('survey') }}">アンケート</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" aria-current="page" href="{{ url_for('results') }}">集計結果</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
 
-{% if chart_data %}
-<div class="card mb-4">
-    <div class="card-header">
-        定量的評価 (総回答数: {{ total_responses }}件)
-    </div>
-    <div class="card-body">
-        <div style="width: 100%; max-width: 900px; margin: auto;">
-            <canvas id="myChart"></canvas>
+    <main class="main-content">
+        <div class="container-fluid mt-4">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <h2 class="mt-5 mb-3">来店に影響する各要素の点数</h2>
+            <hr>
+            <div class="row justify-content-center">
+                {% if stacked_bar_url %}
+                    <div class="col-lg-8 col-md-10">
+                        <div class="card">
+                            <div class="card-header">積み上げ棒グラフ</div>
+                            <div class="card-body">
+                                <img src="{{ stacked_bar_url }}" class="img-fluid" alt="積み上げ棒グラフ">
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="col"><p class="text-muted">表示するグラフがありません。</p></div>
+                {% endif %}
+            </div>
+
+            <h2 class="mt-5 mb-3">円グラフ</h2>
+            <hr>
+            <div class="row justify-content-center">
+                {% if pie_chart_url %}
+                    <div class="col-lg-8 col-md-10">
+                        <div class="card">
+                            <div class="card-header">アンケート回答</div>
+                            <div class="card-body">
+                                <img src="{{ pie_chart_url }}" class="img-fluid" alt="円グラフ">
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="col"><p class="text-muted">表示するグラフがありません。</p></div>
+                {% endif %}
+            </div>
         </div>
-    </div>
-</div>
+    </main>
 
-<div class="card">
-    <div class="card-header">
-        コメント一覧
-    </div>
-    <div class="card-body">
-        {% if comments %}
-            <ul class="list-group">
-                {% for comment in comments %}
-                    {% if comment %}
-                        <li class="list-group-item">{{ comment }}</li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>コメントはまだありません。</p>
-        {% endif %}
-    </div>
-</div>
+    <footer class="site-footer text-center py-3 mt-auto">
+        <div class="container-fluid">
+            <p class="mb-0">&copy; 2025 Team2.</p>
+        </div>
+    </footer>
 
-{% else %}
-<div class="alert alert-info" role="alert">
-    まだアンケートの回答がありません。
-</div>
-{% endif %}
-{% endblock %}
-
-{% block scripts %}
-{% if chart_data %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const ctx = document.getElementById('myChart');
-        // Flaskから渡されたJSON文字列をパースしてJavaScriptオブジェクトに変換
-        const chartData = JSON.parse('{{ chart_data | safe }}');
-
-        new Chart(ctx, {
-            type: 'bar', // グラフの種類 (積み上げ棒グラフにする場合は stacked: true を追加)
-            data: chartData,
-            options: {
-                responsive: true,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: '各質問への評価分布'
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
-                },
-                scales: {
-                    x: {
-                        stacked: true, // 質問ごとに評価を積み上げる
-                    },
-                    y: {
-                        stacked: true, // 質問ごとに評価を積み上げる
-                        beginAtZero: true,
-                        ticks: {
-                            // 目盛りを整数にする
-                            stepSize: 1
-                        }
-                    }
-                }
-            }
-        });
-    });
-</script>
-{% endif %}
-{% endblock %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

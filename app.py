@@ -6,7 +6,9 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import csv
-
+# from  python.result import prepare_chart_data,group_plot
+from  python.result import circle_plot,group_plot
+ 
 # --- PyMC関連のインポート ---
 import pymc as pm
 import arviz as az
@@ -298,33 +300,58 @@ def survey():
     # survey.html を表示する。質問3の項目リストをテンプレートに渡す
     return render_template('survey.html', q3_factors=Q3_FACTORS)
 
-
+PLOT_DIR = 'static/plots'
+os.makedirs(PLOT_DIR, exist_ok=True)
 @app.route('/results')
-@requires_auth  # この行で認証を必須にする
+@requires_auth
 def results():
-    """集計結果ページ"""
-    all_data = []
-    for filename in sorted(os.listdir(DATA_FOLDER)):
-        if filename.endswith('.json'):
-            filepath = os.path.join(DATA_FOLDER, filename)
-            try:
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    all_data.append(json.load(f))
-            except json.JSONDecodeError:
-                print(f"Warning: Skipping corrupted or empty file: {filename}")
+    interactive_charts = []
+    static_images = []
+    
+    files_to_plot = [{'filename': 'result.csv', 'title': '総合アンケート結果'}]
+    
+    try:
+        for item in files_to_plot:
+            filepath = os.path.join(DATA_FOLDER, item['filename'])
+            if os.path.exists(filepath):
+                
+                # 静的画像グラフを生成・保存
+                plot_filename = f"{item['filename']}.png"
+                save_path = os.path.join(PLOT_DIR, plot_filename)
+                group_plot(filepath, save_path)
+                plot_url = url_for('static', filename=f'plots/{plot_filename}')
+                stacked_bar_plot_url = url_for('static', filename=f'plots/{plot_filename}')
+                # static_images.append({
+                #     'title': item['title'] + " (来店に影響する各要素の点数)",
+                #     'url': plot_url
+                # })
+                # print("ここまではできている")
+                
+                plot_filename_circle = f"{item['filename']}_circle.png"
+                save_path = os.path.join(PLOT_DIR, plot_filename_circle)
+                print(save_path)
+                circle_plot(filepath, save_path)
+                plot_url_circle = url_for('static', filename=f'plots/{plot_filename_circle}')
+                # static_images.append({
+                #     'title': item['title'] + " (来店に影響する各要素の点数)",
+                #     'url': plot_url_circle 
+                # })
+                pie_chart_plot_url = url_for('static', filename=f'plots/{plot_filename_circle}')
+            else:
+                 flash(f"ファイルが見つかりませんでした: {item['filename']}", "warning")
+    except Exception as e:
+        flash(f"グラフ生成中にエラーが発生しました: {e}", "danger")
 
-    chart_data, comments, total_responses = None, [], len(all_data)
-    if all_data:
-        df = pd.DataFrame(all_data)
-        comments = df['comment'].dropna().tolist()
-        chart_labels = [q.split(':')[0] for q in QUESTIONS]
-        datasets, ratings = [], [1, 2, 3, 4, 5]
-        colors = ['rgba(255, 99, 132, 0.7)', 'rgba(255, 159, 64, 0.7)', 'rgba(255, 205, 86, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(54, 162, 235, 0.7)']
-        for i, rating in enumerate(ratings):
-            rating_counts = [(df[f'q{q_num}'] == str(rating)).sum() if f'q{q_num}' in df else 0 for q_num in range(1, 6)]
-            datasets.append({'label': f'評価 {rating}', 'data': [int(c) for c in rating_counts], 'backgroundColor': colors[i % len(colors)]})
-        chart_data = json.dumps({'labels': chart_labels, 'datasets': datasets})
-    return render_template('results.html', chart_data=chart_data, comments=comments, total_responses=total_responses)
+    return render_template('results.html', 
+                           stacked_bar_url=stacked_bar_plot_url, 
+                           pie_chart_url=pie_chart_plot_url)
+
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+   
 
 # ==============================================================================
 # 【変更点 4】Renderデプロイメントのためのポートバインディング
